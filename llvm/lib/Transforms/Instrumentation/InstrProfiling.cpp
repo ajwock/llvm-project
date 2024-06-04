@@ -63,6 +63,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "instrprof"
 
+#define InstrProfThreadLocal true
+
 namespace llvm {
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
@@ -286,11 +288,18 @@ private:
   /// acts on.
   Value *getCounterAddress(InstrProfCntrInstBase *I);
 
+  Value *getThreadLocalCounterAddress(InstrProfCntrInstBase *I);
+
   /// Get the region counters for an increment, creating them if necessary.
   ///
   /// If the counter array doesn't yet exist, the profile data variables
   /// referring to them will also be created.
   GlobalVariable *getOrCreateRegionCounters(InstrProfCntrInstBase *Inc);
+
+  /*
+  /// Get the thread local region counters, creating them if necessary.
+  GlobalVariable *getOrCreateThreadLocalRegionCounters(InstrProfCntrInstBase *Inc);
+  */
 
   /// Create the region counters.
   GlobalVariable *createRegionCounters(InstrProfCntrInstBase *Inc,
@@ -893,6 +902,10 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
 }
 
 Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
+  if (InstrProfThreadLocal) {
+    return getThreadLocalCounterAddress(I);
+  }
+
   auto *Counters = getOrCreateRegionCounters(I);
   IRBuilder<> Builder(I);
 
@@ -930,6 +943,23 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   }
   auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), BiasLI);
   return Builder.CreateIntToPtr(Add, Addr->getType());
+}
+
+Value *InstrLowerer::getThreadLocalCounterAddress(InstrProfCntrInstBase *I) {
+  GlobalVariable *CountersTLS = getOrCreateRegionCounters(I);
+  IRBuilder<> Builder(I);
+
+  if (isa<InstrProfTimestampInst>(I))
+    CountersTLS->setAlignment(Align(8));
+
+  auto *Addr = Builder.CreateConstInBoundsGEP2_32(
+          CountersTLS->getValueType(),
+          Builder.CreateThreadLocalAddress(CountersTLS),
+          0,
+          I->getIndex()->getZExtValue());
+
+  assert(!isRuntimeCounterRelocationEnabled());
+  return Addr;
 }
 
 Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
@@ -1460,6 +1490,7 @@ InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
                             Constant::getNullValue(CounterTy), Name);
     GV->setAlignment(Align(8));
   }
+  GV->setThreadLocal(InstrProfThreadLocal); // TODO: ThreadLocal opt
   return GV;
 }
 
