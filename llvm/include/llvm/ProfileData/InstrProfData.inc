@@ -312,6 +312,10 @@ INSTR_PROF_SECT_ENTRY(IPSK_data, \
 INSTR_PROF_SECT_ENTRY(IPSK_cnts, \
                       INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), \
                       INSTR_PROF_CNTS_COFF, "__DATA,")
+// TODO: what's that __DATA bit?
+INSTR_PROF_SECT_ENTRY(IPSK_tls_cnts, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), \
+                      INSTR_PROF_CNTS_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_bitmap, \
                       INSTR_PROF_QUOTE(INSTR_PROF_BITS_COMMON), \
                       INSTR_PROF_BITS_COFF, "__DATA,")
