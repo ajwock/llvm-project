@@ -113,6 +113,8 @@ const char *__llvm_profile_begin_vtabnames(void);
 const char *__llvm_profile_end_vtabnames(void);
 char *__llvm_profile_begin_counters(void);
 char *__llvm_profile_end_counters(void);
+char *__llvm_profile_begin_tls_counters(void);
+char *__llvm_profile_end_tls_counters(void);
 char *__llvm_profile_begin_bitmap(void);
 char *__llvm_profile_end_bitmap(void);
 ValueProfNode *__llvm_profile_begin_vnodes();
@@ -120,6 +122,14 @@ ValueProfNode *__llvm_profile_end_vnodes();
 const VTableProfData *__llvm_profile_begin_vtables();
 const VTableProfData *__llvm_profile_end_vtables();
 uint32_t *__llvm_profile_begin_orderfile();
+
+/*!
+ * \brief Add counter values from TLS to the global counters for the program
+ *
+ * On thread exit, atomically add the values in TLS counters to the static
+ * counters for the whole process.
+ */
+void __llvm_profile_tls_counters_finalize();
 
 /*!
  * \brief Merge profile data from buffer.

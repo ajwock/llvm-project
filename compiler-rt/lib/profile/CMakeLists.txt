@@ -64,6 +64,7 @@ set(PROFILE_SOURCES
   InstrProfilingPlatformDarwin.c
   InstrProfilingPlatformFuchsia.c
   InstrProfilingPlatformLinux.c
+  InstrProfilingTLSLinux.cpp
   InstrProfilingPlatformOther.c
   InstrProfilingPlatformWindows.c
   InstrProfilingRuntime.cpp
@@ -75,8 +76,11 @@ set(PROFILE_HEADERS
   InstrProfilingInternal.h
   InstrProfilingPort.h
   InstrProfilingUtil.h
+  InstrProfilingTLS.h
   WindowsMMap.h
   )
+
+set(PROFILE_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
 
 if(WIN32)
   list(APPEND PROFILE_SOURCES
@@ -132,6 +136,9 @@ if(APPLE)
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+    OBJECT_LIBS RTInterception
+                RTSanitizerCommon
+                RTSanitizerCommonLibc
     PARENT_TARGET profile)
 else()
   add_compiler_rt_runtime(clang_rt.profile
@@ -140,5 +147,8 @@ else()
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+    OBJECT_LIBS RTInterception
+                RTSanitizerCommon
+                RTSanitizerCommonLibc
     PARENT_TARGET profile)
 endif()
