@@ -35,6 +35,7 @@
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
 #include "InstrProfilingUtil.h"
+#include "InstrProfilingTLS.h"
 
 /* From where is profile name specified.
  * The order the enumerators define their
@@ -1068,6 +1069,7 @@ void __llvm_profile_initialize_file(void) {
  */
 COMPILER_RT_VISIBILITY
 void __llvm_profile_initialize(void) {
+  __llvm_register_profile_intercepts();
   __llvm_profile_initialize_file();
   if (!__llvm_profile_is_continuous_mode_enabled())
     __llvm_profile_register_write_file_atexit();
