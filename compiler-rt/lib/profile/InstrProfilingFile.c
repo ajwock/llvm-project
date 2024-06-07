@@ -1212,7 +1212,11 @@ int __llvm_orderfile_dump(void) {
   return rc;
 }
 
-static void writeFileWithoutReturn(void) { __llvm_profile_write_file(); }
+static void writeFileWithoutReturn(void) { 
+    // Handle main thread tls counters
+//    __llvm_profile_tls_counters_finalize();
+    __llvm_profile_write_file();
+}
 
 COMPILER_RT_VISIBILITY
 int __llvm_profile_register_write_file_atexit(void) {

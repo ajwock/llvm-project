@@ -28,20 +28,12 @@ extern "C" {
 #define PROF_CNTS_START INSTR_PROF_SECT_START(INSTR_PROF_CNTS_COMMON)
 #define PROF_CNTS_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_CNTS_COMMON)
 
-extern char PROF_TLS_CNTS_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
-extern char PROF_TLS_CNTS_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
-
 
 // Clarity:  This is where the tls counters SECTION begins.  This
 // is not where the TLS section for this module begins on this thread-
 // it's merely useful for calculating the offset of 
 // __llvm_prf_tls_cnts in the PH_TLS program header.
-COMPILER_RT_VISIBILITY char *__llvm_profile_begin_tls_counters(void) {
-  return &PROF_TLS_CNTS_START;
-}
-COMPILER_RT_VISIBILITY char *__llvm_profile_end_tls_counters(void) {
-  return &PROF_TLS_CNTS_STOP;
-}
+
 
 char *tls_pubvis_profile_begin_tls_counters(void) {
     return __llvm_profile_begin_tls_counters();
@@ -77,7 +69,7 @@ static int get_counters_begin_and_end(const char *mod_name, char **tls_begin, ch
         cnts_end_f = __llvm_profile_end_counters;
         num_counters_f = __llvm_profile_get_num_counters;
     } else {
-        void *handle = dlopen(mod_name, RTLD_LAZY);
+        void *handle = dlopen(mod_name, RTLD_LAZY | RTLD_NOLOAD);
         if (handle == NULL) {
             return 0;
         }
