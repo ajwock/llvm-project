@@ -64,6 +64,7 @@ set(PROFILE_SOURCES
   InstrProfilingPlatformDarwin.c
   InstrProfilingPlatformFuchsia.c
   InstrProfilingPlatformLinux.c
+  InstrProfilingTLS.c
   InstrProfilingTLSLinux.cpp
   InstrProfilingPlatformOther.c
   InstrProfilingPlatformWindows.c

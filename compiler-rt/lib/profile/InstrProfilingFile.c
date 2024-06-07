@@ -1070,6 +1070,7 @@ void __llvm_profile_initialize_file(void) {
 COMPILER_RT_VISIBILITY
 void __llvm_profile_initialize(void) {
   __llvm_register_profile_intercepts();
+  register_thread_exit_handler(__llvm_profile_tls_counters_finalize);
   __llvm_profile_initialize_file();
   if (!__llvm_profile_is_continuous_mode_enabled())
     __llvm_profile_register_write_file_atexit();
