@@ -11,6 +11,7 @@
 extern "C" {
 
 #include "InstrProfiling.h"
+#include "InstrProfilingTLS.h"
 #include "InstrProfilingInternal.h"
 }
 
@@ -27,6 +28,12 @@ extern "C" {
 #define PROF_TLS_CNTS_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_TLS_CNTS_COMMON)
 #define PROF_CNTS_START INSTR_PROF_SECT_START(INSTR_PROF_CNTS_COMMON)
 #define PROF_CNTS_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_CNTS_COMMON)
+
+
+extern char PROF_CNTS_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+extern char PROF_CNTS_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+extern char PROF_TLS_CNTS_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+extern char PROF_TLS_CNTS_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 
 
 // Clarity:  This is where the tls counters SECTION begins.  This
@@ -141,12 +148,15 @@ found_tls_ph:
     // Offset of __llvm_prf_tls_cnts into the TLS block for this module
     uint64_t tls_cnts_tlsblk_offset = (uint64_t) tls_cnts_begin - ph_true_vaddr;
 
+    
     /* sketch tls_get_addr version
     size_t tls_index[2] = {0};
     tls_index[0] = info->dlpi_tls_modid;
     tls_index[1] = tls_cnts_tlsblk_offset;
     void *tls_prf_cnts_modlocal_begin = __tls_get_addr(tls_index);
     */
+
+    /* // Commented this out just for testing purposes
     uint64_t tls_prf_cnts_modlocal_begin = (uint64_t) info->dlpi_tls_data + tls_cnts_tlsblk_offset;
 
     // TODO: implemented for uint64_t counters only for now, but that ain't right long term cuz
@@ -156,11 +166,84 @@ found_tls_ph:
     for (; tls_cnt != tls_end; tls_cnt++, cnt++) {
         __atomic_fetch_add(cnt, *tls_cnt, __ATOMIC_RELAXED);
     }
+    */
     return 0;
 }
 
+
+
+struct finalization_data {
+    char *mod_begin;
+    char *tls_img_begin;
+    char *tls_img_end;
+    char *cnts_begin;
+    char *cnts_end;
+};
+
+static int FindAndAddCounters_cb(struct dl_phdr_info *info, size_t size, void *data) {
+    finalization_data *fdata = (finalization_data *) data;
+    char *mod_begin = fdata->mod_begin;
+    // We're looking for a match to the dladdr calculated based on PROF_CNTS_START
+    if (mod_begin != (char *) info->dlpi_addr) {
+        return 0;
+    }
+
+    if (info->dlpi_tls_data == NULL) {
+        // should be impossible at this point, but still.  Silently fail
+        return 1;
+    }
+
+    const Elf64_Phdr *hdr = info->dlpi_phdr;
+    const Elf64_Phdr *last_hdr = hdr + info->dlpi_phnum;
+
+    const Elf64_Phdr *tls_hdr;
+    for (; hdr != last_hdr; ++hdr) {
+        if (hdr->p_type == PT_TLS) {
+            tls_hdr = hdr;
+            goto found_tls_ph;
+        }
+    }
+    return 1;
+found_tls_ph:
+    uint64_t tls_cnts_size = (uint64_t) fdata->tls_img_end - (uint64_t) fdata->tls_img_begin;
+    uint64_t num_counters = tls_cnts_size / sizeof(uint64_t);
+
+    // Calculate the offset of __llvm_prf_tls_cnts into the tls block for this module.
+    // The addresses in use below correspond to the tls initialization image,
+    // which is statically allocated for the module, rather than the TLS block itself.
+    uint64_t ph_true_vaddr = (uint64_t) info->dlpi_addr + (uint64_t) tls_hdr->p_vaddr;
+    uint64_t tls_cnts_tlsblk_offset = (uint64_t) fdata->tls_img_begin - ph_true_vaddr;
+
+    // Calculate the thread local copy of __llvm_prf_tls_cnts for this module.
+    uint64_t tls_prf_cnts_modlocal_begin = (uint64_t) info->dlpi_tls_data + tls_cnts_tlsblk_offset;
+
+    uint64_t *tls_cnt = (uint64_t *) tls_prf_cnts_modlocal_begin;
+    uint64_t *tls_end = (uint64_t *) tls_cnt + num_counters;
+    uint64_t *cnt = (uint64_t *) fdata->cnts_begin;
+    for (; tls_cnt != tls_end; tls_cnt++, cnt++) {
+        __atomic_fetch_add(cnt, *tls_cnt, __ATOMIC_RELAXED);
+    }
+    return 1;
+}
+
+COMPILER_RT_VISIBILITY
 void __llvm_profile_tls_counters_finalize(void) {
-    dl_iterate_phdr(AddCountersPerModule_cb, NULL);
+    struct finalization_data fdata = {0};
+    fdata.tls_img_begin = &PROF_TLS_CNTS_START;
+    fdata.tls_img_end = &PROF_TLS_CNTS_STOP;
+    fdata.cnts_begin = &PROF_CNTS_START;
+    fdata.cnts_end = &PROF_CNTS_STOP;
+
+    if (!fdata.tls_img_begin || !fdata.tls_img_end || !fdata.cnts_begin || !fdata.cnts_end) {
+        return;
+    }
+
+    Dl_info info;
+    if (dladdr(fdata.cnts_begin, &info) == 0) {
+        return;
+    }
+    fdata.mod_begin = (char *) info.dli_fbase;
+    dl_iterate_phdr(FindAndAddCounters_cb, &fdata);
 }
 
 struct pthread_wrapper_arg {
@@ -179,13 +262,20 @@ void *pthread_fn_wrapper(void *arg_ptr) {
     // Do nothing (TLS is automatically loaded and zeroed)
     void *retval = fn(arg);
     // cleanup
-    __llvm_profile_tls_counters_finalize();
+    run_thread_exit_handlers();
     // Combine counters with main counters
     return retval;
 }
 
+extern int interceptors_registered;
+
+int interceptors_registered = 0;
+
 void __llvm_register_profile_intercepts() {
-    register_profile_intercepts();
+    int compar = 0;
+    if (__atomic_compare_exchange_n(&interceptors_registered, &compar, 1, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+        register_profile_intercepts();
+    }
 }
 
 } // end extern "C"
