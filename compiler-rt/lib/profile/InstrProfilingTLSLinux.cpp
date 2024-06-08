@@ -41,7 +41,6 @@ extern char PROF_TLS_CNTS_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 // it's merely useful for calculating the offset of 
 // __llvm_prf_tls_cnts in the PH_TLS program header.
 
-
 char *tls_pubvis_profile_begin_tls_counters(void) {
     return __llvm_profile_begin_tls_counters();
 }
@@ -267,15 +266,8 @@ void *pthread_fn_wrapper(void *arg_ptr) {
     return retval;
 }
 
-extern int interceptors_registered;
-
-int interceptors_registered = 0;
-
 void __llvm_register_profile_intercepts() {
-    int compar = 0;
-    if (__atomic_compare_exchange_n(&interceptors_registered, &compar, 1, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
-        register_profile_intercepts();
-    }
+    register_profile_intercepts();
 }
 
 } // end extern "C"

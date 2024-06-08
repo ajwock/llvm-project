@@ -27,8 +27,6 @@ struct texit_func_handler {
     unsigned int texit_fnc_count;
 };
 
-extern struct texit_func_handler texit_registry;
-
 void register_thread_exit_handler(texit_fnc f);
 
 void run_thread_exit_handlers(void);
