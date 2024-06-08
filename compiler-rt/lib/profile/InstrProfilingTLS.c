@@ -1,6 +1,7 @@
 #include "InstrProfilingTLS.h"
+#include "InstrProfiling.h"
 
-struct texit_func_handler texit_registry = {0};
+struct texit_func_handler texit_registry COMPILER_RT_WEAK;
 
 static void lock_texit_registry(void) {
     int expected = 0;
@@ -32,6 +33,7 @@ static void runlock_texit_registry(void) {
 // TODO:  Was too lazy/scared to figure out if I could use an actual lock, and also this current
 // implementation might be better served with memfence anyways rather than a shit ton of
 // atomic load/stores
+// Weak ensures that only one registry will be used, hopefully
 void register_thread_exit_handler(texit_fnc f) {
     wlock_texit_registry();
     unsigned int cnt = __atomic_load_n(&texit_registry.texit_fnc_count, __ATOMIC_RELAXED);
