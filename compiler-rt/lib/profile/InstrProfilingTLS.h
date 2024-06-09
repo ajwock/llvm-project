@@ -1,11 +1,8 @@
 #ifndef INSTR_PROFILING_TLS_H
 #define INSTR_PROFILING_TLS_H
 
-void __llvm_register_profile_intercepts();
-
 char *__llvm_profile_begin_tls_counters(void);
 char *__llvm_profile_end_tls_counters(void);
-
 
 /*!
  * \brief Add counter values from TLS to the global counters for the program
@@ -15,20 +12,29 @@ char *__llvm_profile_end_tls_counters(void);
  */
 void __llvm_profile_tls_counters_finalize(void);
 
+/*
+ * Dylib stuff
+ */
 typedef void (*texit_fnc)(void);
 
 
-#define NUM_TEXIT_FNCS 128
+typedef struct texit_fn_node {
+    struct texit_fn_node *prev;
+    texit_fnc fn;
+    struct texit_fn_node *next;
+} texit_fn_node;
 
 // TODO: really this should be write-preferring rwlocked
-struct texit_func_handler {
+struct texit_fn_registry {
     int texit_mtx;
-    texit_fnc texit_fncs[NUM_TEXIT_FNCS];
-    unsigned int texit_fnc_count;
+    texit_fn_node head;
+    texit_fn_node tail;
 };
 
-void register_thread_exit_handler(texit_fnc f);
-
+void register_tls_prfcnts_module_thread_exit_handler(texit_fn_node *new_node);
+void unregister_tls_prfcnts_module_thread_exit_handler(texit_fn_node *new_node);
 void run_thread_exit_handlers(void);
+
+void register_profile_intercepts();
 
 #endif
