@@ -1,5 +1,6 @@
 #include "InstrProfilingTLS.h"
 #include "InstrProfiling.h"
+#include <stdlib.h>
 
 // Maintain a linked list of handlers to run on thread exit.
 // This is broken out into a dylib so that the registry is truly global across dlopen et. al.
@@ -53,6 +54,14 @@ static inline texit_fn_node *replace_nodep(texit_fn_node **nodepp, texit_fn_node
     texit_fn_node *nodep = *nodepp;
     *nodepp = new_nodep;
     return nodep;
+}
+
+void flush_main_thread_counters(void) {
+    static int flushed = 0;
+    if (!flushed) {
+        run_thread_exit_handlers();
+        flushed = 1;
+    }
 }
 
 __attribute__((constructor))
