@@ -1080,7 +1080,6 @@ void ToolChain::addProfileRTLibs(const llvm::opt::ArgList &Args,
 
 void ToolChain::addThreadLocalProfileRTLibs(const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs) const {
-
   if (needsProfileRT(Args) && Args.hasArg(options::OPT_fprofile_thread_local)) {
       // Static first, so we can specify '-u' where needed
       CmdArgs.push_back(getCompilerRTArgString(Args, "profile_threadlocal"));
