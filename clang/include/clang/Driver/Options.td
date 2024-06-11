@@ -1768,6 +1768,9 @@ def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
 def fprofile_instr_generate_EQ : Joined<["-"], "fprofile-instr-generate=">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<file>">,
     HelpText<"Generate instrumented code to collect execution counts into <file> (overridden by LLVM_PROFILE_FILE env var)">;
+def fprofile_thread_local : Flag<["-"], "fprofile-threadlocal">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    HelpText<"Generage profile counters in thread local storage">;
 def fprofile_instr_use : Flag<["-"], "fprofile-instr-use">, Group<f_Group>,
     Visibility<[ClangOption, CLOption]>;
 def fprofile_instr_use_EQ : Joined<["-"], "fprofile-instr-use=">,
@@ -7085,9 +7088,6 @@ def coverage_version_EQ : Joined<["-"], "coverage-version=">,
 def dump_coverage_mapping : Flag<["-"], "dump-coverage-mapping">,
   HelpText<"Dump the coverage mapping records, for testing">,
   MarshallingInfoFlag<CodeGenOpts<"DumpCoverageMapping">>;
-def instr_profile_thread_local : Flag<["-"], "instr-profile-thread-local">,
-  HelpText<"Generate profiling data for each thread">,
-  MarshallingInfoFlag<CodeGenOpts<"InstrProfileThreadLocal">>;
 def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfield-access">,
   HelpText<"Use register sized accesses to bit-fields, when possible.">,
   MarshallingInfoFlag<CodeGenOpts<"UseRegisterSizedBitfieldAccess">>;
