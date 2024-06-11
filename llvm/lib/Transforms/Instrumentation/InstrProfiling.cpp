@@ -63,8 +63,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "instrprof"
 
-#define InstrProfThreadLocal true
-
 namespace llvm {
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
@@ -87,6 +85,11 @@ cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
                           "Use debug info to correlate"),
                clEnumValN(InstrProfCorrelator::BINARY, "binary",
                           "Use binary to correlate")));
+
+cl::opt<bool> InstrProfThreadLocal(
+        "instr-prof-thread-local",
+        cl::desc("Generate thread local counter regions"),
+        cl::init(false));
 } // namespace llvm
 
 namespace {
