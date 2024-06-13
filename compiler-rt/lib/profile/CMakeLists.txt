@@ -145,7 +145,8 @@ if(APPLE)
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
     PARENT_TARGET profile)
 else()
-  if(LINUX)
+  #if(UNIX AND NOT APPLE AND NOT ANDROID)
+  if(OS_NAME MATCHES "Linux")
     add_compiler_rt_runtime(clang_rt.profile_threadlocal
       STATIC
       OS ${PROFILE_SUPPORTED_OS}
