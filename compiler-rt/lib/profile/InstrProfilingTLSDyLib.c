@@ -12,11 +12,6 @@
 
 struct texit_fn_registry texit_registry;
 
-// TODO: Make this an rwlock, or perhaps locks per node, or something a little smarter?
-// Or use a real lock like an adult?
-// It's a global lock for the whole program, but I'm pretty sure you already have a performance issue if
-// you're loading and unloading dls or having threads exit often enough for this to cause its own
-// performance issue.
 static void lock_texit_registry(void) {
     int expected = 0;
     while (!__atomic_compare_exchange_n(&texit_registry.texit_mtx, &expected, 1, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
