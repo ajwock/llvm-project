@@ -74,7 +74,7 @@ set(PROFILE_STATIC_TLS_SOURCES
   InstrProfilingTLS.c
   InstrProfilingStaticTLSLinux.cpp)
 
-set(PROFILE_DYN_TLS_SOURCES
+set(PROFILE_SHARED_TLS_SOURCES
   InstrProfilingTLSDyLib.c
   InstrProfilingDyLibLinux.cpp)
 
@@ -140,36 +140,38 @@ if(APPLE)
     STATIC
     OS ${PROFILE_SUPPORTED_OS}
     ARCHS ${PROFILE_SUPPORTED_ARCH}
-    CFLAGS ${EXTRA_FLAGS} -g3 -O0
+    CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
     PARENT_TARGET profile)
 else()
-  add_compiler_rt_runtime(clang_rt.profile_threadlocal
-    STATIC
-    OS ${PROFILE_SUPPORTED_OS}
-    ARCHS ${PROFILE_SUPPORTED_ARCH}
-    CFLAGS ${EXTRA_FLAGS} -g3 -O0
-    SOURCES ${PROFILE_STATIC_TLS_SOURCES} 
-    ADDITIONAL_HEADERS ${PROFILE_HEADERS}
-    PARENT_TARGET profile)
+  if(LINUX)
+    add_compiler_rt_runtime(clang_rt.profile_threadlocal
+      STATIC
+      OS ${PROFILE_SUPPORTED_OS}
+      ARCHS ${PROFILE_SUPPORTED_ARCH}
+      CFLAGS ${EXTRA_FLAGS}
+      SOURCES ${PROFILE_STATIC_TLS_SOURCES} 
+      ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+      PARENT_TARGET profile)
 
-  add_compiler_rt_runtime(clang_rt.profile_threadlocal
-    SHARED
-    OS ${PROFILE_SUPPORTED_OS}
-    ARCHS ${PROFILE_SUPPORTED_ARCH}
-    CFLAGS ${EXTRA_FLAGS} -g3 -O0
-    SOURCES ${PROFILE_DYN_TLS_SOURCES} 
-    ADDITIONAL_HEADERS ${PROFILE_HEADERS}
-    OBJECT_LIBS RTInterception
-                RTSanitizerCommon
-                RTSanitizerCommonLibc
-    PARENT_TARGET profile)
+    add_compiler_rt_runtime(clang_rt.profile_threadlocal
+      SHARED
+      OS ${PROFILE_SUPPORTED_OS}
+      ARCHS ${PROFILE_SUPPORTED_ARCH}
+      CFLAGS ${EXTRA_FLAGS}
+      SOURCES ${PROFILE_SHARED_TLS_SOURCES} 
+      ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+      OBJECT_LIBS RTInterception
+                  RTSanitizerCommon
+                  RTSanitizerCommonLibc
+      PARENT_TARGET profile)
+  endif()
 
-    add_compiler_rt_runtime(clang_rt.profile
+  add_compiler_rt_runtime(clang_rt.profile
     STATIC
     ARCHS ${PROFILE_SUPPORTED_ARCH}
-    CFLAGS ${EXTRA_FLAGS} -g3 -O0
+    CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
     PARENT_TARGET profile)

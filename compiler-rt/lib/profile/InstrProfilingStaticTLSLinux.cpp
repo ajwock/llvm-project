@@ -19,13 +19,16 @@ extern "C" {
 
 #define PROF_TLS_CNTS_START INSTR_PROF_SECT_START(INSTR_PROF_TLS_CNTS_COMMON)
 #define PROF_TLS_CNTS_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_TLS_CNTS_COMMON)
-#define PROF_CNTS_START INSTR_PROF_SECT_START(INSTR_PROF_CNTS_COMMON)
-#define PROF_CNTS_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_CNTS_COMMON)
 
-extern char PROF_CNTS_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
-extern char PROF_CNTS_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_TLS_CNTS_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_TLS_CNTS_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+
+COMPILER_RT_VISIBILITY char *__llvm_profile_begin_tls_counters(void) {
+  return &PROF_TLS_CNTS_START;
+}
+COMPILER_RT_VISIBILITY char *__llvm_profile_end_tls_counters(void) {
+  return &PROF_TLS_CNTS_STOP;
+}
 
 struct finalization_data {
     char *mod_begin;
@@ -35,10 +38,10 @@ struct finalization_data {
     char *cnts_end;
 };
 
-// This is O(num_modules) unfortunately.  If there were a mechanism to calculate the
+// This is O(num_modules + num_counters) unfortunately.  If there were a mechanism to calculate the
 // thread-local start of a thread-local section like there is a mechanism to calculate
 // the static start of a static section (i.e. __start_$sectionname), that would 
-// simplify implementation a lot and make this O(1).
+// simplify implementation a lot and make this just O(num_counters).
 static int FindAndAddCounters_cb(struct dl_phdr_info *info, size_t size, void *data) {
     finalization_data *fdata = (finalization_data *) data;
     char *mod_begin = fdata->mod_begin;
@@ -48,7 +51,6 @@ static int FindAndAddCounters_cb(struct dl_phdr_info *info, size_t size, void *d
     }
 
     if (info->dlpi_tls_data == NULL) {
-        // should be impossible at this point, but still.  Silently fail
         return 1;
     }
 
@@ -64,8 +66,8 @@ static int FindAndAddCounters_cb(struct dl_phdr_info *info, size_t size, void *d
     }
     return 1;
 found_tls_ph:
-    uint64_t tls_cnts_size = (uint64_t) fdata->tls_img_end - (uint64_t) fdata->tls_img_begin;
-    uint64_t num_counters = tls_cnts_size / sizeof(uint64_t);
+    uint64_t num_counters = __llvm_profile_get_num_counters(fdata->tls_img_begin, fdata->tls_img_end);
+    uint64_t counter_size = __llvm_profile_counter_entry_size();
 
     // Calculate the offset of __llvm_prf_tls_cnts into the tls block for this module.
     // The addresses in use below correspond to the tls initialization image,
@@ -76,11 +78,17 @@ found_tls_ph:
     // Calculate the thread local copy of __llvm_prf_tls_cnts for this module.
     uint64_t tls_prf_cnts_modlocal_begin = (uint64_t) info->dlpi_tls_data + tls_cnts_tlsblk_offset;
 
-    uint64_t *tls_cnt = (uint64_t *) tls_prf_cnts_modlocal_begin;
-    uint64_t *tls_end = (uint64_t *) tls_cnt + num_counters;
-    uint64_t *cnt = (uint64_t *) fdata->cnts_begin;
-    for (; tls_cnt != tls_end; tls_cnt++, cnt++) {
-        __atomic_fetch_add(cnt, *tls_cnt, __ATOMIC_RELAXED);
+    // We don't support single byte counters because they are also resilient to thread
+    // synchronization issues and they are designed to avoid memory overhead, which is
+    // the opposite of what TL counters do.
+    // TODO: warn?
+    if (counter_size == sizeof(uint64_t)) {
+        uint64_t *tls_cnt = (uint64_t *) tls_prf_cnts_modlocal_begin;
+        uint64_t *tls_end = (uint64_t *) tls_cnt + num_counters;
+        uint64_t *cnt = (uint64_t *) fdata->cnts_begin;
+        for (; tls_cnt != tls_end; tls_cnt++, cnt++) {
+            __atomic_fetch_add(cnt, *tls_cnt, __ATOMIC_RELAXED);
+        }
     }
     return 1;
 }
@@ -88,10 +96,10 @@ found_tls_ph:
 COMPILER_RT_VISIBILITY
 void __llvm_profile_tls_counters_finalize(void) {
     struct finalization_data fdata = {0};
-    fdata.tls_img_begin = &PROF_TLS_CNTS_START;
-    fdata.tls_img_end = &PROF_TLS_CNTS_STOP;
-    fdata.cnts_begin = &PROF_CNTS_START;
-    fdata.cnts_end = &PROF_CNTS_STOP;
+    fdata.tls_img_begin = __llvm_profile_begin_tls_counters();
+    fdata.tls_img_end = __llvm_profile_end_tls_counters();
+    fdata.cnts_begin = __llvm_profile_begin_counters();
+    fdata.cnts_end = __llvm_profile_end_counters();
 
     if (!fdata.tls_img_begin || !fdata.tls_img_end || !fdata.cnts_begin || !fdata.cnts_end) {
         return;

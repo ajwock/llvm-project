@@ -113,8 +113,6 @@ const char *__llvm_profile_begin_vtabnames(void);
 const char *__llvm_profile_end_vtabnames(void);
 char *__llvm_profile_begin_counters(void);
 char *__llvm_profile_end_counters(void);
-char *__llvm_profile_begin_tls_counters(void);
-char *__llvm_profile_end_tls_counters(void);
 char *__llvm_profile_begin_bitmap(void);
 char *__llvm_profile_end_bitmap(void);
 ValueProfNode *__llvm_profile_begin_vnodes();

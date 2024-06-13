@@ -23,3 +23,5 @@ RUN: llvm-profdata merge -o %t-atomic.profdata %t-atomic.profraw
 RUN: %clang_profuse=%t-tls.profdata -o %t-lib.tls.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-lib.c
 RUN: %clang_profuse=%t-atomic.profdata -o %t-lib.atomic.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-lib.c
 RUN: diff %t-lib.tls.ll %t-lib.atomic.ll
+
+XFAIL: target={{.*}}

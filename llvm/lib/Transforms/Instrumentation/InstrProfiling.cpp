@@ -623,6 +623,7 @@ enum class ValueProfilingCallType {
 
 } // end anonymous namespace
 
+// TODO: put TLS counters incompatibility checks here
 PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
                                                   ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
@@ -1500,7 +1501,7 @@ InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
                             Constant::getNullValue(CounterTy), Name);
     GV->setAlignment(Align(8));
   }
-  GV->setThreadLocal(ThreadLocal); // TODO: ThreadLocal opt
+  GV->setThreadLocal(ThreadLocal);
   return GV;
 }
 
@@ -1621,7 +1622,6 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   auto *Int8PtrTy = PointerType::getUnqual(Ctx);
   // Allocate statically the array of pointers to value profile nodes for
   // the current function.
-  // TODO: WTF does this have to do with tls (pls, I really need to know)
   Constant *ValuesPtrExpr = ConstantPointerNull::get(Int8PtrTy);
   uint64_t NS = 0;
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
