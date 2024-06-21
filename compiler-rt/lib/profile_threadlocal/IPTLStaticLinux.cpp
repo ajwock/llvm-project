@@ -10,10 +10,14 @@
 
 extern "C" {
 
-#include "InstrProfiling.h"
+#include "profile/InstrProfiling.h"
+/*
 #include "InstrProfilingInternal.h"
-#include "InstrProfilingTLS.h"
+*/
+#include "IPTL.h"
 }
+
+#include "IPTLInternal.h"
 
 extern "C" {
 

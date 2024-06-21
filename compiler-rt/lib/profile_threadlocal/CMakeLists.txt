@@ -46,36 +46,19 @@ int main() {
 
 " COMPILER_RT_TARGET_HAS_UNAME)
 
-add_compiler_rt_component(profile)
+add_compiler_rt_component(profile_threadlocal)
 
-set(PROFILE_SOURCES
-  GCDAProfiling.c
-  InstrProfiling.c
-  InstrProfilingInternal.c
-  InstrProfilingValue.c
-  InstrProfilingBuffer.c
-  InstrProfilingFile.c
-  InstrProfilingMerge.c
-  InstrProfilingMergeFile.c
-  InstrProfilingNameVar.c
-  InstrProfilingVersionVar.c
-  InstrProfilingWriter.c
-  InstrProfilingPlatformAIX.c
-  InstrProfilingPlatformDarwin.c
-  InstrProfilingPlatformFuchsia.c
-  InstrProfilingPlatformLinux.c
-  InstrProfilingPlatformOther.c
-  InstrProfilingPlatformWindows.c
-  InstrProfilingRuntime.cpp
-  InstrProfilingUtil.c
-  )
+set(PTL_STATIC_SOURCES
+  IPTLStatic.cpp
+  IPTLStaticLinux.cpp)
 
-set(PROFILE_HEADERS
-  InstrProfiling.h
-  InstrProfilingInternal.h
-  InstrProfilingPort.h
-  InstrProfilingUtil.h
-  WindowsMMap.h
+set(PTL_SHARED_SOURCES
+  IPTLDyLib.cpp
+  IPTLDyLibLinux.cpp)
+
+set(PTL_HEADERS
+  ITPL.h
+  IPTLDyLibLinux.h
   )
 
 set(PROFILE_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
@@ -126,21 +109,25 @@ append_list_if(COMPILER_RT_HAS_WD4221_FLAG /wd4221 EXTRA_FLAGS)
 # Disable 'nonstandard extension used: translation unit is empty'.
 append_list_if(COMPILER_RT_HAS_WD4206_FLAG /wd4206 EXTRA_FLAGS)
 
-if(APPLE)
-  add_compiler_rt_runtime(clang_rt.profile
-    STATIC
-    OS ${PROFILE_SUPPORTED_OS}
-    ARCHS ${PROFILE_SUPPORTED_ARCH}
-    CFLAGS ${EXTRA_FLAGS}
-    SOURCES ${PROFILE_SOURCES}
-    ADDITIONAL_HEADERS ${PROFILE_HEADERS}
-    PARENT_TARGET profile)
-else()
-  add_compiler_rt_runtime(clang_rt.profile
-    STATIC
-    ARCHS ${PROFILE_SUPPORTED_ARCH}
-    CFLAGS ${EXTRA_FLAGS}
-    SOURCES ${PROFILE_SOURCES}
-    ADDITIONAL_HEADERS ${PROFILE_HEADERS}
-    PARENT_TARGET profile)
+if(OS_NAME MATCHES "Linux")
+add_compiler_rt_runtime(clang_rt.profile_threadlocal
+  STATIC
+  OS ${PROFILE_SUPPORTED_OS}
+  ARCHS ${PROFILE_SUPPORTED_ARCH}
+  CFLAGS ${EXTRA_FLAGS} -O0 -g3
+  SOURCES ${PTL_STATIC_SOURCES} 
+  ADDITIONAL_HEADERS ${PTL_HEADERS}
+  PARENT_TARGET profile_threadlocal)
+
+add_compiler_rt_runtime(clang_rt.profile_threadlocal
+  SHARED
+  OS ${PROFILE_SUPPORTED_OS}
+  ARCHS ${PROFILE_SUPPORTED_ARCH}
+  CFLAGS ${EXTRA_FLAGS} -O0 -g3
+  SOURCES ${PTL_SHARED_SOURCES} 
+  ADDITIONAL_HEADERS ${PTL_HEADERS}
+  OBJECT_LIBS RTInterception
+              RTSanitizerCommon
+              RTSanitizerCommonLibc
+  PARENT_TARGET profile_threadlocal)
 endif()

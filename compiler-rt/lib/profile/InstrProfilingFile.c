@@ -34,7 +34,7 @@
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
-#include "InstrProfilingTLS.h"
+#include "profile_threadlocal/IPTL.h"
 #include "InstrProfilingUtil.h"
 
 /* From where is profile name specified.

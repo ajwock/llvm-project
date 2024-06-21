@@ -10,15 +10,23 @@
 
 extern "C" {
 
-#include "InstrProfiling.h"
-#include "InstrProfilingInternal.h"
-#include "InstrProfilingTLS.h"
-#include "InstrProfilingTLSDyLib.h"
+#include "profile/InstrProfiling.h"
+/*
+#include "profile/InstrProfilingInternal.h"
+*/
+#include "IPTL.h"
 }
 
+#include "IPTLInternal.h"
 #include "interception/interception.h"
 
 extern "C" {
+
+void ***get_self_dtv(void) {
+    void *dtv_addr = NULL;
+    asm("mov %%fs:8,%0" : "=r"(dtv_addr));
+    return (void ***) dtv_addr;
+}
 
 struct pthread_wrapper_arg {
   void *(*fn)(void *);
@@ -42,7 +50,9 @@ void *pthread_fn_wrapper(void *arg_ptr) {
   return retval;
 }
 
-void __llvm_register_profile_intercepts() { register_profile_intercepts(); }
+void __llvm_register_profile_intercepts(void) { register_profile_intercepts(); }
+
+
 
 } // end extern "C"
 
@@ -60,4 +70,4 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
   return res;
 }
 
-void register_profile_intercepts() { INTERCEPT_FUNCTION(pthread_create); }
+void register_profile_intercepts(void) { INTERCEPT_FUNCTION(pthread_create); }

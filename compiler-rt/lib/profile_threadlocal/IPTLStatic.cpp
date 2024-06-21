@@ -1,5 +1,12 @@
-#include "InstrProfilingTLS.h"
-#include "InstrProfiling.h"
+extern "C" {
+
+#include "profile/InstrProfiling.h"
+#include "IPTL.h"
+
+} 
+#include "IPTLInternal.h"
+
+extern "C" {
 
 struct texit_fn_node module_node COMPILER_RT_VISIBILITY;
 
@@ -26,4 +33,5 @@ __llvm_profile_tls_register_thread_exit_handler(void) {
 }
 
 // TODO: Add destructor
-// (But not yet, I'm scared)
+
+}
