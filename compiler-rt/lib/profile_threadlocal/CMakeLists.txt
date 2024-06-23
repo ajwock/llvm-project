@@ -54,11 +54,14 @@ set(PTL_STATIC_SOURCES
 
 set(PTL_SHARED_SOURCES
   IPTLDyLib.cpp
-  IPTLDyLibLinux.cpp)
+  IPTLDyLibLinux.cpp
+  IPTLThreadRegistry.cpp)
 
 set(PTL_HEADERS
-  ITPL.h
+  IPTL.h
   IPTLDyLibLinux.h
+  IPTLInternal.h
+  IPTLThreadRegistry.h
   )
 
 set(PROFILE_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})

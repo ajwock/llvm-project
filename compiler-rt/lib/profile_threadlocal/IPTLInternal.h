@@ -1,7 +1,11 @@
+// C++ only header
 #ifndef IPTL_INTERNAL_H
 #define IPTL_INTERNAL_H
 
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "sanitizer_common/sanitizer_thread_registry.h"
+
+#include "IPTLThreadRegistry.h"
 
 using namespace __sanitizer;
 
@@ -24,12 +28,12 @@ void unregister_tls_prfcnts_module_thread_exit_handler(texit_fn_node *);
 class TexitFnRegistry {
 public:
   TexitFnRegistry() : mtx() {
-      head.prev = NULL;
-      head.fn = NULL;
+      head.prev = nullptr;
+      head.fn = nullptr;
       head.next = &tail;
       tail.prev = &head;
-      tail.fn = NULL;
-      tail.next = NULL;
+      tail.fn = nullptr;
+      tail.next = nullptr;
   }
   Mutex mtx;
   texit_fn_node head;
@@ -40,8 +44,18 @@ public:
   void run_handlers();
 };
 
+class InstrProfThreadLocalCtx final {
+public:
+    InstrProfThreadLocalCtx() : texit_handlers(),
+        thread_registry(&thread_factory) {}
+
+    TexitFnRegistry     texit_handlers;
+    ThreadRegistry      thread_registry;
+};
+
+extern InstrProfThreadLocalCtx ctx;
 
 void register_profile_intercepts(void);
 void run_thread_exit_handlers(void);
 
-#endif IPTL_INTERNAL_H
+#endif

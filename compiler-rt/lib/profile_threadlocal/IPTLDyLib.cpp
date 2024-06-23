@@ -14,7 +14,17 @@
 //
 // This node is defined in the static portion of the tls counts extension.
 
+/*
+char ctx_place[sizeof(InstrProfThreadLocalCtx)] alignas(InstrProfThreadLocalCtx);
+InstrProfThreadLocalCtx *ctx;
+*/
 
+InstrProfThreadLocalCtx ctx;
+
+__attribute__((constructor))
+static void __initialize_tls_exit_registry() {
+  register_profile_intercepts();
+}
 static inline texit_fn_node *take_nodep(texit_fn_node **nodepp) {
   texit_fn_node *nodep = *nodepp;
   *nodepp = NULL;
@@ -57,25 +67,17 @@ void TexitFnRegistry::run_handlers() {
     this->mtx.ReadUnlock();
 }
 
-__attribute__((constructor))
-static void __initialize_tls_exit_registry() {
-  register_profile_intercepts();
-}
-
-
-struct TexitFnRegistry texit_registry;
-
 void run_thread_exit_handlers(void) {
-    texit_registry.run_handlers();
+    ctx.texit_handlers.run_handlers();
 }
 
 extern "C" {
 
 void register_tls_prfcnts_module_thread_exit_handler(texit_fn_node *new_nodep) {
-    texit_registry.register_handler(new_nodep);
+    ctx.texit_handlers.register_handler(new_nodep);
 }
 void unregister_tls_prfcnts_module_thread_exit_handler(texit_fn_node *old_nodep) {
-    texit_registry.unregister_handler(old_nodep);
+    ctx.texit_handlers.unregister_handler(old_nodep);
 }
 
 void flush_main_thread_counters(void) {
